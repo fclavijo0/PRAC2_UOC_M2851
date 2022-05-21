@@ -1,9 +1,11 @@
 # PRAC2_UOC_M2851
 M2.851 - Tipología y ciclo de vida de los datos aula 1. - Práctica 2: Limpieza y análisis de datos
 
-Título:
+**Título: Limpieza y análisis de datos del dataset Titanic: Machine Learning from Disaster**
 
-Este repositorio se crea como parte de una práctica de la asignatura M2.851 - Tipología y ciclo de vida de los datos aula 1, de la UOC, en el Máster de Ciencia de Datos. En la cual se elaborará un caso práctico orientado a aplicar conocimeintos para tratamiento de un dataset. El dataset escojido fue: Titanic: Machine Learning from Disaster (https://www.kaggle.com/c/titanic)
+Este repositorio se crea como parte de una práctica de la asignatura M2.851 - Tipología y ciclo de vida de los datos aula 1, de la UOC, en el Máster de Ciencia de Datos. En la cual se elaborará un caso práctico orientado a aplicar conocimeintos para tratamiento de un dataset. 
+
+DATASET seleccionado: Titanic: Machine Learning from Disaster (https://www.kaggle.com/c/titanic)
 
 **GRUPO DE LA PRÁCTICA**
 - FEDERICO CLAVIJO LÓPEZ (fclavijo0)
