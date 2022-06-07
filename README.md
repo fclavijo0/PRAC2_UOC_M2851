@@ -22,6 +22,7 @@ Dateset seleccionado: Titanic: Machine Learning from Disaster (https://www.kaggl
 
 
 Link al video: 
+https://drive.google.com/file/d/1Dq7FFIfnzRYx4ao_5WlKUsi8nxmmviJ_/view?usp=sharing
 
 
 **RECURSOS UTILIZADOS EN EL DESARROLLO DE LA PRÁCTICA**
