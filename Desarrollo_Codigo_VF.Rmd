@@ -1,0 +1,504 @@
+---
+title: "PRAC 2: Limpieza y análisis de datos"
+author: "Alejandro Medina, Federico Clavijo"
+date: "Mayo 20"
+output:
+  html_document:
+    highlight: default
+    number_sections: yes
+    theme: cosmo
+    toc: yes
+    toc_depth: 2
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+------------------------------------------------------------------------
+
+1.  Descripción del dataset. ¿Por qué es importante y qué
+    pregunta/problema pretende responder?
+
+------------------------------------------------------------------------
+
+El data set seleccionado corresponde a training set (train.csv) del
+respositorio Titanic - Machine Learning from Disaster encontrado en la
+página kaggle (link:
+<https://www.kaggle.com/competitions/titanic/data>). Este data set
+corresponde a un fichero con 891 registros de pasajeros que abordaron el
+Titanic. Las (12) varibables que lo compone son:
+
+-   PassengerId: (integer) Número entero de identificación de cada
+    pasajero
+-   Survived: (integer) Binario indicando: 0 - No sobreviviente / 1 -
+    Sobreviviente
+-   Pclass: (integer) Número entero de la clase 1, 2 o 3
+-   Name: (character) Nombre del pasajero de la siguiente manera
+    "Apellido, Mr./Mrs/Miss. Nombres (Otro nombre)"
+-   Sex: (character) Sexo female / male
+-   Age: (integer) Número entero de la edad
+-   SibSp: (integer) Número de hermanos o conyugue abordo
+-   Parch: (integer) Número de padres o hijos abordo
+-   Ticket: (character) Número del tiquete algunos con letra al comienzo
+    y espacio
+-   Fare: (numeric) Tarifa
+-   Cabin: (character) Cabina
+-   Embarked: (character) Lugar donde el pasajero abordó (S)
+    Southampton, (C) Cherbourg, and (Q) Queenstown
+
+Los objetivos que nos hemos trazado en esta actividad corresponden a:
+
+-   Determinar si hay correlación entre las variables género y el hecho
+    de supervivivencia
+
+-   Calcular el modelo que permita predecir la superviviencia de pasajeros en 
+    función de las variables: género, edad, Pclass, y Embarked.
+
+2.  Integración y selección de los datos de interés a analizar. Puede
+    ser el resultado de adicionar diferentes datasets o una subselección
+    útil de los datos originales, en base al objetivo que se quiera
+    conseguir.
+
+------------------------------------------------------------------------
+
+```{r}
+library(dplyr)
+
+# Carga del data set orieginal a la variable dt_original
+dt_original <- read.csv("train.csv", sep=",")
+#head(dt_original)
+
+# Número de filas del data set
+n <- nrow(dt_original)
+#n
+
+# Data set resultante filtrando quitando algunas columnas no requeridas.
+dt_1 <- select(dt_original, - SibSp, - Ticket, - Fare )
+attach(dt_1)
+head(dt_1)
+
+# Resumen descriptivo de las variables del data set seleccionado
+summary(dt_1)
+```
+
+------------------------------------------------------------------------
+
+3.  Limpieza de los datos
+
+------------------------------------------------------------------------
+
+3.1. ¿Los datos contienen ceros o elementos vacíos? Gestiona cada uno de
+estos casos.
+
+</ol>
+
+```{r}
+# Se identifican los siguientes elementos a ser ajustados:
+# La varible Age tiene 177 NA's, para lo cual se decide pasar a 0 para luego manejarlo como valor extremo.
+
+# Por estética se quita los decimales en la edad
+dt_1[, 6] <-trunc(dt_1$Age)
+# dt_1[,6]
+
+# Pasar NA's a 0
+dt_1$Age[is.na(dt_1$Age)] <- 0
+
+# Comprobación de que han sido tratados los NA's identificados
+# summary(dt_1$Age)
+
+# La variable Cabin tiene espacios vacíos (null) serán llenados con 0
+i=1
+for (i in 1:n) {
+  if ((dt_1[i, 8]) == "") {
+    dt_1[i, 8] <- 0
+  } 
+i+1
+}
+
+# Comprobación de que han sido tratados los espacios vacíos identificados
+# head(dt_1$Cabin)
+
+# valores faltantes de "Embarked" se cambian por X
+dt_1["Embarked"][dt_1["Embarked"] == ""] <- "X"
+
+```
+
+3.2. Identifica y gestiona los valores extremos.
+
+</ol>
+
+```{r}
+# Se identifican los siguientes elementos a ser ajustados:
+# La variable Age tiene datos extremos incluyendo el 0, razón por la cual se decide que para edades inferiores a 5 años, se realizará imputación por la media aritmética en Age. Para ello se imputará con la respectiva media aritmética según si el nombre indica si es Master/Miss o Mr/Mrs, para identificar si es adulto o niño/adolecente
+
+# Cálculo del promedio de Age según sea Master/Miss, Mr/Mrs, Rev o Dr
+i=0
+n_master_miss=0
+n_mr_mrs=0
+n_rev=0
+n_dr=0
+suma_age_master_miss=0
+suma_age_mr_mrs=0
+suma_age_rev=0
+suma_age_dr=0
+for (i in 1:n) {
+  if(grepl(pattern = '(Master|Miss)', dt_1[i,4])) {
+    n_master_miss=n_master_miss+1
+    suma_age_master_miss = suma_age_master_miss+(dt_1[i, 6])
+  } else if (grepl(pattern = '(Mr|Mrs)', dt_1[i,4])) {
+    n_mr_mrs=n_mr_mrs+1
+    suma_age_mr_mrs = suma_age_mr_mrs+(dt_1[i, 6])
+  } else if (grepl(pattern = '(Rev)', dt_1[i,4])) {
+    n_rev=n_rev+1
+    suma_age_rev = suma_age_rev+(dt_1[i, 6])
+  } else {
+    n_dr=n_dr+1
+    suma_age_dr = suma_age_dr+(dt_1[i, 6])
+    }
+i+1  
+}
+
+# El promedio de la edad de las personas Master / Miss que correspondería niñ@s y jóvenes
+promedio_age_master_miss=trunc(suma_age_master_miss/n_master_miss)
+#promedio_age_master_miss
+
+# El promedio de la edad de las personas Mr / Mrs que correspondería hombres y mujeres
+promedio_age_mr_mrs=trunc(suma_age_mr_mrs/n_mr_mrs)
+#promedio_age_mr_mrs
+
+# El promedio de la edad de las personas Rev que correspondería Curas
+promedio_age_rev=trunc(suma_age_rev/n_rev)
+#promedio_age_rev
+
+# El promedio de la edad de las personas Dr que correspondería Doctor@s
+promedio_age_dr=trunc(suma_age_dr/n_dr)
+#promedio_age_dr
+
+
+# Asignación de la variable Age a valores que sean inferiores a 5 años, dependiendo si la persona es Master, Miss, Mr, Mrs, Rev o Dr.
+i=1
+for (i in 1:n) {
+  if ((dt_1[i, 6]) <= 0 & (grepl(pattern = '(Master|Miss)', dt_1[i,4]))) {
+    dt_1[i, 6] <- promedio_age_master_miss
+  } else if ((dt_1[i, 6]) <= 0 & (grepl(pattern = '(Mr|Mrs)', dt_1[i,4]))) {
+    dt_1[i, 6] <- promedio_age_mr_mrs
+  } else if ((dt_1[i, 6]) <= 0 & (grepl(pattern = '(Rev)', dt_1[i,4]))) {
+    dt_1[i, 6] <- promedio_age_rev
+  } else if ((dt_1[i, 6]) <= 0 & (grepl(pattern = '(Dr)', dt_1[i,4]))) {
+    dt_1[i, 6] <- promedio_age_dr
+  } 
+i+1
+}
+
+# Comprobar que no hay edades inferiores a 5, no se muestra por tema de límite de páginas.
+# summary(dt_1$Age)
+
+# Se comprueba por cada variable la existencia de valores no coherentes. Y se identifica que no se requiere más ajustes
+head(dt_1 %>% distinct(Sex, .keep_all = FALSE))
+head(dt_1 %>% distinct(Survived, .keep_all = FALSE))
+head(dt_1 %>% distinct(Pclass, .keep_all = FALSE))
+head(dt_1 %>% distinct(Parch, .keep_all = FALSE))
+head(dt_1 %>% distinct(Cabin, .keep_all = FALSE))
+head(dt_1 %>% distinct(Embarked, .keep_all = FALSE))
+```
+
+------------------------------------------------------------------------
+
+4.  Análisis de los datos.
+
+------------------------------------------------------------------------
+
+4.1. Selección de los grupos de datos que se quieren analizar/comparar
+
+</ol>
+
+```{r}
+# Según los objetivos iniciales se requieren los siguientes subgrupos de datos:
+# - Objetivo 1: Determinar si hay correlación entre las variables género y el hecho de supervivivencia
+dt_obj1 <- select(dt_1, Survived, Sex)
+
+# Análisis requeridos para el objetivo 1:
+# - Analizar gráfica de las variables Survived y Sex
+# - Estudio de correlación lineal entre las variables
+
+# - Objetivo 2: Calcular el modelo que permita predecir la superviviencia de pasajeros en función de las variables: género, edad, Pclass, y Embarked. 
+dt_obj2 <- select(dt_1, - Cabin, - PassengerId, - Name, - Parch )
+
+dt_obj2_SST <- table(Survived,Sex)
+# prop.table(dt_obj2_SST, margin = 1)
+
+dt_obj2_SAT <- table(Survived,Age)
+# prop.table(dt_obj2_SAT, margin = 1)
+
+dt_obj2_SPcT <- table(Survived,Pclass)
+# prop.table(dt_obj2_SPcT, margin = 1)
+
+dt_obj2_SET <- table(Survived,Embarked)
+# prop.table(dt_obj2_SET, margin = 1)
+
+# Analisis requeridos para el objetivo 2:
+# - Análizar gráfica de las variables de dt_1
+# - revisar que variables son predictoras de la variable sobrevive 
+# - revision de cada variable y hacer una mapa de correlación
+# - Discretizar variables, analizar y finalmente generar gráfico de arbol
+# - Estudio de correlación logística entre las variables. Aplicando modelos de regresión logística binaria.
+
+```
+
+4.2. Comprobación de la normalidad y homogeneidad de la varianza.
+
+</ol>
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# Se comprueba se tiene un comportamiento normal las variables de interés: Ages
+hist(dt_1$Age, main = "Histograma de frecuencias", ylab = "Frecuencia de Age", xlab = "Years")
+# Esta es la gráfica de la variable Age es de los valores sin imputar
+
+# Análisis de homogeneidad de la variables (Hay que ajustar mejor la gráfica)
+ggplot(data = dt_obj2, aes(x = Survived, y = Age, colour = Age)) +
+  stat_boxplot(geom = "errorbar", width = 0.2) +
+  geom_boxplot() +
+  geom_point() +
+  theme_bw() +
+  theme(legend.position = "none")
+# Se identifican datos outliers, media, los cuartiles 1(25%), 2(50%) y 3(75%) de las variables Survived y Age
+
+# Prueba con la función de R t.test, donde identificamos que los valores son iguales de medias de la población.
+t.test(dt_obj2$Age, dt_obj2$Survived, alternative="less", var.equal=TRUE)
+# # El test no encuentra diferencias significativas entre las medias de los dos grupos
+
+var.test(x = dt_obj2[dt_obj2$Survived == "1", "Age"],
+         y = dt_obj2[dt_obj2$Survived == "0", "Age"] )
+# El test no encuentra diferencias significativas entre las varianzas de los dos grupos
+```
+
+4.3. Aplicación de pruebas estadísticas para comparar los grupos de
+datos. En función de los datos y el objetivo del estudio, aplicar
+pruebas de contraste de hipótesis, correlaciones, regresiones, etc.
+Aplicar al menos tres métodos de análisis diferentes.
+
+
+Para resolución del objetivo 1: Determinar si hay correlación entre las
+variables género y el hecho de supervivivencia
+
+</ol>
+
+```{r}
+library(corrplot)
+library(DescTools)
+# renombrar variables male y female por 1 y 0 respectivamente
+i=1
+for (i in 1:nrow(dt_obj2)) {
+  if (dt_obj2[i, 3] == "male") {
+      dt_obj2[i, 3] <- 1
+  } else {
+      dt_obj2[i, 3] <- 0
+    }
+i+1
+}
+
+# Convertir variable Sex a numeric
+dt_obj2$Sex <- as.numeric(dt_obj2$Sex)
+
+# Ingreso de datos variables
+matrix_cor_variables <- data.frame(
+  "Survived" = dt_obj2$Survived,
+  "Sex" = dt_obj2$Sex
+)
+
+#head(matrix_cor_variables)
+
+# comando calcular matriz de correlación
+round(cor(matrix_cor_variables),2)
+# matriz de correlación de forma gráfica
+correlacion_variables<-round(cor(matrix_cor_variables), 1)
+corrplot(correlacion_variables, method="number", type="upper")
+```
+A partir de la matriz de correlación se identifica que las dos variables Sex y 
+Survived tienen una relación correlación negativa moderada que signifca que 
+de manera moderada el comportamiento de una de las variables puede explicar el 
+comportamiento de la otra.
+
+
+Para resolución del objetivo 2: Calcular el modelo que permita predecir
+la superviviencia de pasajeros en función de las variables
+
+</ol>
+
+```{r}
+# Análisis Valores de la V de Cramér y Phi entre 0.1 y 0.3 nos indican que la asociación estadística es baja, y entre 0.3 y 0.5 se puede considerar una asociación media. Finalmente, superior a 0.5 la asociación estadística entre las variables sería alta. 
+
+Phi(dt_obj2_SST) 
+CramerV(dt_obj2_SST) 
+
+Phi(dt_obj2_SAT) 
+CramerV(dt_obj2_SAT) 
+
+Phi(dt_obj2_SPcT) 
+CramerV(dt_obj2_SPcT) 
+
+Phi(dt_obj2_SET) 
+CramerV(dt_obj2_SET) 
+
+```
+
+Trabajamos la variable AGE y aleatorizamos el dataframe
+
+```{r}
+
+set.seed(1)
+data_random <- dt_obj2[sample(nrow(dt_obj2)),]
+```
+
+Para la futura evaluación del árbol de decisión, es necesario dividir el
+conjunto de datos en un conjunto de entrenamiento y un conjunto de
+prueba. El conjunto de entrenamiento es el subconjunto del conjunto
+original de datos utilizado para construir un primer modelo.
+
+La variable por la que clasificaremos es el campo de si el pasajero
+sobrevivió o no, que está en la primera columna. De esta forma,
+tendremos un conjunto de datos para el entrenamiento y uno para la
+validación
+
+```{r}
+set.seed(666)
+y <- data_random[,1] 
+X <- data_random[,2:5]
+```
+
+De forma dinámica podemos definir una forma de separar los datos en
+función de un parámetro, en este caso del "split_prop". Definimos un
+parámetro que controla el split de forma dinámica en el test.
+
+```{r}
+split_prop <- 3 
+max_split<-floor(nrow(X)/split_prop)
+tr_limit <- nrow(X)-max_split
+ts_limit <- nrow(X)-max_split+1
+
+trainX <- X[1:tr_limit,]
+trainy <- y[1:tr_limit]
+testX <- X[(ts_limit+1):nrow(X),]
+testy <- y[(ts_limit+1):nrow(X)]
+
+```
+
+Después de una extracción aleatoria de casos es altamente recomendable
+efectuar un análisis de datos mínimo para asegurarnos de no obtener
+clasificadores sesgados por los valores que contiene cada muestra. En
+este caso, verificaremos que la proporción del supervivientes es más o
+menos constante en los dos conjuntos:
+
+```{r}
+summary(trainX);
+summary(trainy)
+summary(testX)
+summary(testy)
+```
+
+Verificamos fácilmente que no hay diferencias graves que puedan sesgar
+las conclusiones.
+
+Adiconalmente, se crea el árbol de decisión usando los datos de
+entrenamiento (no hay que olvidar que la variable outcome es de tipo
+factor)
+
+```{r}
+if(!require(C50)){
+    install.packages('C50', repos='http://cran.us.r-project.org')
+    library(C50)
+}
+summary(trainy)
+```
+
+```{r}
+trainy = as.factor(trainy)
+model <- C50::C5.0(trainX, trainy,rules=TRUE )
+summary(model)
+```
+
+------------------------------------------------------------------------
+
+5.  Representación de los resultados a partir de tablas y gráficas. Este
+    apartado se puede responder a lo largo de la práctica, sin necesidad
+    de concentrar todas las representaciones en este punto de la
+    práctica.
+
+------------------------------------------------------------------------
+
+A continuación, mostramos el árbol obtenido.
+
+```{r}
+model <- C50::C5.0(trainX, trainy)
+plot(model)
+
+# Exportar archivo final
+write.csv(x = dt_obj2, file = "PRAC2_fclavijo_amedinau_dt_out.csv", row.names = TRUE) 
+```
+
+------------------------------------------------------------------------
+
+6.  Resolución del problema. A partir de los resultados obtenidos,
+    ¿cuáles son las conclusiones? ¿Los resultados permiten responder al
+    problema?
+
+------------------------------------------------------------------------
+
+Dentro del modelo creado, podemos ver a partir de Errors, el número y
+porcentaje de casos mal clasificados en el subconjunto de entrenamiento.
+El árbol obtenido clasifica erróneamente 103 de los 594 casos dados,
+una tasa de error del 17.3%.
+
+A partir del árbol de decisión de dos hojas que hemos modelado, se
+pueden extraer las siguientes reglas de decisión (gracias a rules=TRUE
+podemos imprimir las reglas directamente):
+
+- Sex = "Hombre" → Muere. Validez: 81,5%
+- Pclass "3ª" → Muere. Validez: 74,3%
+- Pclass "1ª", "2ª" y AGE "menos e iguales a 15 años" → Sobrevive. Validez: 94,7%
+- Sex = "Mujer" y Embarked "C y Q" → Sobrevive. Validez: 82,2%
+- Sex = "Mujer" → Sobrevive. Validez: 72%
+
+Por tanto, podemos concluir que el conocimiento extraído y cruzado con
+el análisis visual se resume en que la sobrevivencia esta sujeta a que sea 
+mujer del embarque C y Q. Y tambien los menores de 15 años de la clase 1ra y 2da.
+
+```{r}
+predicted_model <- predict( model, testX, type="class" )
+print(sprintf("La precisión del árbol es: %.4f %%",100*sum(predicted_model == testy) / length(predicted_model)))
+
+```
+
+------------------------------------------------------------------------
+
+7.  Código: Hay que adjuntar el código, preferiblemente en R, con el que
+    se ha realizado la limpieza, análisis y representación de los datos.
+    Si lo preferís, también podéis trabajar en Python.
+
+------------------------------------------------------------------------
+
+El código en R se encuentra presente en el documento denominado:
+Desarrollo_codigo_VF.Rmd
+
+------------------------------------------------------------------------
+
+Tabla de contribuciones
+
+------------------------------------------------------------------------
+
+Contribuciones Investigación previa: 
+- AM Alejandro Medina Uicab, FC Federico Clavijo López 
+
+Redacción de las respuestas: 
+- AM Alejandro Medina Uicab, FC Federico Clavijo López 
+
+Desarrollo del código: 
+- AM Alejandro Medina Uicab, FC Federico Clavijo López
+
+\`\`\`
