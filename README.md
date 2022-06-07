@@ -15,9 +15,9 @@ Dateset seleccionado: Titanic: Machine Learning from Disaster (https://www.kaggl
 
 
 **ARCHIVOS QUE HACEN PARTE DE LA ENTREGA**
-- Desarrollo_Codigo.Rmd - Corresponde al documento que contiene el código en R que realiza el tratamiento del dataset.
+- Desarrollo_Codigo_VF.Rmd - Corresponde al documento que contiene el código en R que realiza el tratamiento del dataset.
 - Desarrollo.pdf - Corresponde al documento en formato PDF que contiene las respuestas a las preguntas planteadas en la práctica.
-- Salida.csv - Corresponde al documento de salida del proceso del tratamiento del dataset.
+- PRAC2_fclavijo_amedinau_dt_out.csv - Corresponde al documento de salida del proceso del tratamiento del dataset.
 
 
 Link al video: 
